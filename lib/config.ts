@@ -14,6 +14,7 @@ type ConfigEnvKeys =
     // Network
     | 'PORT'
     | 'LISTEN_INADDR_ANY'
+    | 'DISABLE_IPV6'
     | 'REQUEST_RETRY'
     | 'REQUEST_TIMEOUT'
     | 'UA'
@@ -26,6 +27,8 @@ type ConfigEnvKeys =
     | 'CACHE_CONTENT_EXPIRE'
     | 'MEMORY_MAX'
     | 'REDIS_URL'
+    | 'CACHE_HTTP_URL'
+    | 'CACHE_HTTP_TOKEN'
     // Proxy
     | 'PROXY_URI'
     | 'PROXY_URIS'
@@ -238,6 +241,7 @@ type ConfigEnvKeys =
     | 'YOUTUBE_CLIENT_SECRET'
     | 'YOUTUBE_REFRESH_TOKEN'
     | 'YOUTUBE_VIDEO_EMBED_URL'
+    | 'ZAIMANHUA_TOKEN'
     | 'ZHIHU_COOKIES'
     | 'ZODGAME_COOKIE'
     | 'ZSXQ_ACCESS_TOKEN'
@@ -263,6 +267,7 @@ export type Config = {
         port: number;
     };
     listenInaddrAny: boolean;
+    disableIPv6: boolean;
     requestRetry: number;
     requestTimeout: number;
     ua: string;
@@ -281,6 +286,10 @@ export type Config = {
     };
     redis: {
         url: string;
+    };
+    httpCache: {
+        url?: string;
+        token?: string;
     };
     // proxy
     proxyUri?: string;
@@ -684,6 +693,9 @@ export type Config = {
         refreshToken?: string;
         videoEmbedUrl?: string;
     };
+    zaimanhua: {
+        token?: string;
+    };
     zhihu: {
         cookies?: string;
     };
@@ -752,6 +764,7 @@ const calculateValue = () => {
             port: toInt(envs.PORT, 1200), // 监听端口
         },
         listenInaddrAny: toBoolean(envs.LISTEN_INADDR_ANY, true), // 是否允许公网连接，取值 0 1
+        disableIPv6: toBoolean(envs.DISABLE_IPV6, false),
         requestRetry: toInt(envs.REQUEST_RETRY, 2), // 请求失败重试次数
         requestTimeout: toInt(envs.REQUEST_TIMEOUT, 30000), // Milliseconds to wait for the server to end the response before aborting the request
         ua: envs.UA || (toBoolean(envs.NO_RANDOM_UA, false) ? TRUE_UA : 'Mozilla/5.0 (Macintosh; Intel Mac OS X 15_6_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36'),
@@ -760,7 +773,7 @@ const calculateValue = () => {
         allowOrigin: envs.ALLOW_ORIGIN,
         // cache
         cache: {
-            type: envs.CACHE_TYPE || (envs.CACHE_TYPE === '' ? '' : 'memory'), // 缓存类型，支持 'memory' 和 'redis'，设为空可以禁止缓存
+            type: envs.CACHE_TYPE || (envs.CACHE_TYPE === '' ? '' : 'memory'), // Cache type; supports 'memory', 'redis', and 'http'. Set to empty string to disable cache.
             requestTimeout: toInt(envs.CACHE_REQUEST_TIMEOUT, 60),
             routeExpire: toInt(envs.CACHE_EXPIRE, 5 * 60), // 路由缓存时间，单位为秒
             contentExpire: toInt(envs.CACHE_CONTENT_EXPIRE, 1 * 60 * 60), // 不变内容缓存时间，单位为秒
@@ -771,6 +784,10 @@ const calculateValue = () => {
         },
         redis: {
             url: envs.REDIS_URL || 'redis://localhost:6379/',
+        },
+        httpCache: {
+            url: envs.CACHE_HTTP_URL,
+            token: envs.CACHE_HTTP_TOKEN,
         },
         // proxy
         proxyUri: envs.PROXY_URI,
@@ -1179,6 +1196,9 @@ const calculateValue = () => {
             refreshToken: envs.YOUTUBE_REFRESH_TOKEN,
             videoEmbedUrl: envs.YOUTUBE_VIDEO_EMBED_URL || 'https://www.youtube-nocookie.com/embed/',
         },
+        zaimanhua: {
+            token: envs.ZAIMANHUA_TOKEN,
+        },
         zhihu: {
             cookies: envs.ZHIHU_COOKIES,
         },
@@ -1198,7 +1218,6 @@ const calculateValue = () => {
     }
 };
 calculateValue();
-
 (async () => {
     if (envs.REMOTE_CONFIG) {
         const { default: logger } = await import('@/utils/logger');
